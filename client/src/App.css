@@ -1,0 +1,13 @@
+/* -------------------------Category CSS---------------------------- */
+
+.category-btn{
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  margin: 20px 0px;
+}
+
+.align-right{
+  position: absolute;
+  right:2%
+}
