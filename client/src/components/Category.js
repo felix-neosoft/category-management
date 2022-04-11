@@ -76,15 +76,27 @@ function Category() {
     const deleteCategory = (e, type, main, sub) => {
         e.preventDefault()
         if(type === 'MAIN'){
-            deleteMainCategory(main).then(res => {
-                alert('Category Deleted')
-                window.location.replace('/category')
+            deleteMainCategory(main,false).then(res => {
+                if(res.data.status === 200){
+                    alert('Category Deleted')
+                    window.location.replace('/category')
+                }
+                else {
+                    alert(`Main Category: ${main} contains some products. Please delete them first`)
+                }
+                
             })
         }
         else if(type === 'SUB'){
-            deleteSubCategory(main,sub).then(res => {
-                alert('Sub-Category Deleted')
-                window.location.replace('/category')
+            deleteSubCategory(main,sub,true).then(res => {
+                if(res.data.status === 200){
+                    alert('Sub-Category Deleted')
+                    window.location.replace('/category')
+                }
+                else{
+                    alert(`Sub Category: ${sub} of Main Category: ${main} contains some products. Please delete them first`)
+                }
+                
             })
         }
         else{

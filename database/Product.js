@@ -23,7 +23,13 @@ const productSchema = new mongoose.Schema({
     desc:{
         type:String
     },
-    images:[]
+    mainImage:{
+        type:String
+    },
+    subImages:[],
+    status:{
+        type:Boolean
+    }
 })
 
 module.exports = mongoose.model('products',productSchema)

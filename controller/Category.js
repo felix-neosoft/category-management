@@ -35,13 +35,26 @@ const updateSubCategory = async(req,res) => {
 }
 
 const deleteMainCategory = async(req,res) => {
-    await CategoryModel.deleteOne({category:req.query.category})
-    res.json({status:200})
+    if(req.body.info.length === 0){
+        await CategoryModel.deleteOne({category:req.query.category})
+        res.json({status:200})
+    }
+    else{
+        res.json({status:404})
+    }
 }
 
 const deleteSubCategory = async(req,res) => {
-    await CategoryModel.findOneAndUpdate({'category':req.query.category, 'subCategory.category':req.query.subCategory}, {$pull:{'subCategory':{'category':req.query.subCategory}}})
-    res.json({status:200})
+    console.log(req.query)
+    console.log(req.body)
+    if(req.body.info.length === 0){
+        await CategoryModel.findOneAndUpdate({'category':req.query.category, 'subCategory.category':req.query.subCategory}, {$pull:{'subCategory':{'category':req.query.subCategory}}})
+        res.json({status:200})
+    }
+    else{
+        res.json({status:404})
+    }
+   
 }
 
 module.exports = {

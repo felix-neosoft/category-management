@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Navbar, Container, Nav, Card, Form, Button, Modal, Table } from 'react-bootstrap'
-import { addProductsFunc, deleteProductFunc, getCategory, getProductsFunc, updateProductsFunc } from '../config/NodeService'
+import { addProductsFunc, deleteProductFunc, getCategory, getProductsFunc, ProductStatusFunc, updateProductsFunc } from '../config/NodeService'
 
 function Products() {
-    const [state, setState] = useState({id:'', name:'', stock:'', price:'', description:'', mainCategory:'', subCategory:'', files:[], data:[], protocol:'',category:[]})
+    const [state, setState] = useState({id:'', name:'', stock:'', price:'', description:'', mainCategory:'', subCategory:'', files:[], data:[], protocol:'',category:[], subCat:[]})
 
     const [show, setShow] = useState(false)
     const modalClose = () => {
         setShow(false)
         setUseEffectReload(prev => !prev)
     }
+    const mainImgRef = useRef(null)
     const imgRef = useRef(null)
     const [useEffectReload,setUseEffectReload] = useState(false)
  
@@ -50,7 +51,11 @@ function Products() {
                 break
 
             case 'MAIN':
-                setState({...state, mainCategory:e.target.value})
+                state.category.some(element =>{
+                    if(element.category === e.target.value){
+                        setState({...state,mainCategory:e.target.value, subCat:element.subCategory})
+                    }
+                })
                 break
 
             case 'SUB':
@@ -63,16 +68,19 @@ function Products() {
 
     const addProducts = e => {
         e.preventDefault()
-        if(state.id !== '' && state.name !== '' && state.stock !== '' && state.price !== '' && state.description !== ''){
+        if(state.id !== '' && state.name !== '' && state.stock !== '' && state.price !== '' && state.description !== '' && imgRef.current.files.length !== 0 && mainImgRef.current.files.length !== 0 && state.mainCategory !=='' && state.subCategory !==''){
             const formData = new FormData
             formData.append('id',state.id)
             formData.append('name',state.name)
+            formData.append('mainCat',state.mainCategory)
+            formData.append('subCat',state.subCategory)
             formData.append('stock',state.stock)
             formData.append('price',state.price)
             formData.append('description',state.description)
             formData.append('imgNo',imgRef.current.files.length)
+            formData.append('images',mainImgRef.current.files[0])
             for(let i = 0; i< imgRef.current.files.length; i++){
-                formData.append(`images`,imgRef.current.files[i])
+                formData.append('images',imgRef.current.files[i])
             }
             addProductsFunc(formData).then(res => {
                 alert('New Product Added')
@@ -83,25 +91,33 @@ function Products() {
 
     const updateProducts = e => {
         e.preventDefault()
-        if(state.id !== '' && state.name !== '' && state.stock !== '' && state.price !== '' && state.description !== ''){
+        if(state.id !== '' && state.name !== '' && state.stock !== '' && state.price !== '' && state.description !== '' && state.mainCategory !=='' && state.subCategory !==''){
+            let stage = 'TEXT'
             const formData = new FormData
             formData.append('id',state.id)
             formData.append('name',state.name)
             formData.append('stock',state.stock)
+            formData.append('mainCat',state.mainCategory)
+            formData.append('subCat',state.subCategory)
             formData.append('price',state.price)
             formData.append('description',state.description)
             formData.append('imgNo',imgRef.current.files.length)
-            if(imgRef.current.files.length !== 0){
-                formData.append('state',true)
-                for(let i = 0; i< imgRef.current.files.length; i++){
-                    formData.append(`images`,imgRef.current.files[i])
-                }
+            if(mainImgRef.current.files.length !== 0){
+                formData.append('images',mainImgRef.current.files[0])
+                stage = stage + '+MAIN'
             }
-            else formData.append('state',false)
+            if(imgRef.current.files.length !== 0){
+                for(let i = 0; i< imgRef.current.files.length; i++){
+                    formData.append('images',imgRef.current.files[i])
+                }
+                stage = stage + '+SUB'
+            }
+            formData.append('state',stage)
             updateProductsFunc(formData).then(res => {
                 alert('Product Updated')
                 setState({...state, id:'', name:'', stock:'', price:'', description:''})
                 modalClose() 
+                window.location.replace('/products')
             })
         }else alert('Fields must not be blank')
     }
@@ -116,6 +132,27 @@ function Products() {
         })
     }
 
+    const setEdit = (element) => {
+        state.category.some(ele =>{
+            if(ele.category === element.mainCategory){
+                setState({...state,id:element.pid, name:element.name, stock:element.stock, price:element.price, description:element.desc, mainCategory: element.mainCategory, subCategory:element.subCategory, subCat:ele.subCategory})
+            }
+        })
+        setShow(true)
+    }
+
+    const changeProductStatus = (e,pid,status) => {
+        e.preventDefault()
+        ProductStatusFunc({pid:pid, status:!status}).then(res=>{
+            if(res.data.status === 200 ){
+                alert('Status Updated')
+                setUseEffectReload(prev => !prev)
+            }
+        })
+    }
+  
+
+    
     
 
 
@@ -159,13 +196,10 @@ function Products() {
                             <Form.Group className='mb-3'>
                                 <Form.Label>Sub Category</Form.Label>
                                 <Form.Select name='SUB' onChange={(e)=>handler(e)} value={state.subCategory}>
-                                    { state.category.some(element => {
-                                        if(element.category === state.mainCategory){
-                                            element.subCategory.map(ele => (
-                                                <option>{ele.category}</option>
-                                            ))
-                                        }
-                                     })}
+                                    <option></option>
+                                    {state.subCat.map(element => (
+                                        <option>{element.category}</option>
+                                    ))}
                                         
                                 </Form.Select>
                             </Form.Group>
@@ -182,9 +216,14 @@ function Products() {
                                 <Form.Control type='text' as='textarea' rows={3} name='description' onChange={(e)=>handler(e)} value={state.description}/>
                             </Form.Group>
                             <Form.Group className='mb-3'>
+                                <Form.Label>Upload Main Image</Form.Label>
+                                <Form.Control type='file' name='mainimage' ref={mainImgRef} />
+                            </Form.Group>
+                            <Form.Group className='mb-3'>
                                 <Form.Label>Upload Multiple Images</Form.Label>
                                 <Form.Control type='file' name='image' ref={imgRef} multiple />
                             </Form.Group>
+
                             <div className='category-btn'><Button type='submit' variant='primary'>ADD</Button></div>
                         </Form>
                     </Card.Text>
@@ -201,6 +240,8 @@ function Products() {
                                     <th>No.</th>
                                     <th>Product ID</th>
                                     <th>Product Name</th>
+                                    <th>Main Category</th>
+                                    <th>Sub Category</th>
                                     <th>Images</th>
                                     <th>Stock</th>
                                     <th>Price</th>
@@ -214,9 +255,12 @@ function Products() {
                                         <td>{id+1}</td>
                                         <td>{element.pid}</td>
                                         <td>{element.name}</td>
+                                        <td>{element.mainCategory}</td>
+                                        <td>{element.subCategory}</td>
                                         <td>
                                             <span>
-                                                {element.images.map(img => (
+                                                <img src={state.protocol + element.mainImage}width='100' height='100' />
+                                                {element.subImages.map(img => (
                                                     <><img src={state.protocol+img} width='100' height='100' /></>
                                                 ))}
                                             </span>
@@ -226,8 +270,9 @@ function Products() {
                                         <td>{element.desc}</td>
                                         <td>
                                             <span>
-                                                <Button variant='warning' onClick={()=>{setState({...state,id:element.pid, name:element.name, stock:element.stock, price:element.price, description:element.desc});setShow(true)}}>Edit</Button>
+                                                <Button variant='warning' onClick={()=>setEdit(element)}>Edit</Button>
                                                 <Button className='ms-2' variant='danger' onClick={(e)=>deleteProduct(e,element.pid)}>Delete</Button>
+                                                <Button className='ms-2' onClick={(e) => changeProductStatus(e,element.pid, element.status)} variant={element.status ===true?'success':'secondary'}>{element.status === true?'Active':'Not Active'}</Button>
                                             </span>
                                         </td>
                                     </tr>
@@ -253,6 +298,25 @@ function Products() {
                                 <Form.Control type='text' name='name' readOnly value={state.name} />
                             </Form.Group>
                             <Form.Group className='mb-3'>
+                                <Form.Label>Main Category</Form.Label>
+                                <Form.Select name='MAIN' onChange={(e)=>handler(e)} value={state.mainCategory}>
+                                    <option></option>
+                                    {state.category.map(element => (
+                                        <option>{element.category}</option>
+                                    ))}
+                                </Form.Select>
+                            </Form.Group>
+                            <Form.Group className='mb-3'>
+                                <Form.Label>Sub Category</Form.Label>
+                                <Form.Select name='SUB' onChange={(e)=>handler(e)} value={state.subCategory}>
+                                    <option></option>
+                                    {state.subCat.map(element => (
+                                        <option>{element.category}</option>
+                                    ))}
+                                        
+                                </Form.Select>
+                            </Form.Group>
+                            <Form.Group className='mb-3'>
                                 <Form.Label>Stock</Form.Label>
                                 <Form.Control type='text' name='stock' onChange={(e)=>handler(e)} value={state.stock} />
                             </Form.Group>
@@ -263,6 +327,10 @@ function Products() {
                             <Form.Group className='mb-3'>
                                 <Form.Label>Description</Form.Label>
                                 <Form.Control type='text' as='textarea' rows={3} name='description' onChange={(e)=>handler(e)} value={state.description}/>
+                            </Form.Group>
+                            <Form.Group className='mb-3'>
+                                <Form.Label>Upload Main Image</Form.Label>
+                                <Form.Control type='file' name='mainimage' ref={mainImgRef} />
                             </Form.Group>
                             <Form.Group className='mb-3'>
                                 <Form.Label>Upload Multiple Images</Form.Label>
